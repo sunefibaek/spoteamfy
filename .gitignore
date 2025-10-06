@@ -1,0 +1,31 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Poetry
+.poetry/
+poetry.lock
+
+# Virtual environments
+.env/
+.venv/
+env/
+venv/
+
+# VS Code and PyCharm
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Test and coverage reports
+htmlcov/
+.tox/
+.coverage
+.cache
+.pytest_cache/
+
+# Exclude plan folder
+.plan/
