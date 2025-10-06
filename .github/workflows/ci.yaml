@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '[0-9]*'
+      - 'feat/**'
+      - 'bugfix/**'
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Run isort
+        run: poetry run isort . --check --diff
+
+      - name: Run black
+        run: poetry run black . --check --diff
+
+      - name: Run flake8
+        run: poetry run flake8 .
+
+      - name: Run pytest
+        run: poetry run pytest
