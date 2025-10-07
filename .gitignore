@@ -27,5 +27,8 @@ htmlcov/
 .cache
 .pytest_cache/
 
+# User config file
+config/users.json
+
 # Exclude plan folder
 .plan/
