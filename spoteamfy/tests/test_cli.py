@@ -39,7 +39,7 @@ def test_load_users_from_json_missing_key():
             "username": "user1",
             "client_id": "id1",
             "client_secret": "secret1",
-            "redirect_uri": "uri1"
+            "redirect_uri": "uri1",
             # missing refresh_token
         }
     ]
