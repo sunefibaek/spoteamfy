@@ -27,6 +27,9 @@ htmlcov/
 .cache
 .pytest_cache/
 
+# .env file
+.env
+
 # User config file
 config/users.json
 
