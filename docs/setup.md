@@ -39,8 +39,31 @@ python scripts/get_access_token.py
 5. Copy the full redirect URL and paste it back
 6. Update your `refresh_token` in users.json with the returned value
 
-## 4. Test Setup
+## 4. Set Environment Variables (Optional)
 
+Create a `.env` file for easier testing:
 ```bash
-python scripts/test_auth.py
+WEBHOOK_URL=https://your-teams-webhook-url
+USERS_JSON_PATH=/path/to/your/users.json  # Optional, defaults to ./config/users.json
 ```
+
+## 5. Test Setup
+
+Validate authentication:
+```bash
+python scripts/auth_validator.py username
+```
+
+## 6. Run the CLI
+
+With webhook in .env:
+```bash
+python spoteamfy/src/cli.py --num-tracks 5
+```
+
+Or specify webhook directly:
+```bash
+python spoteamfy/src/cli.py --teams-webhook "YOUR_WEBHOOK_URL" --num-tracks 5
+```
+
+That's it! The utility will fetch recently played tracks and post them to Teams.

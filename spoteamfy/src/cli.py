@@ -7,7 +7,8 @@ import click
 import requests
 import spotipy
 from dotenv import load_dotenv
-from spotify_auth import SpotifyAuthError, authenticate_user
+
+from .spotify_auth import SpotifyAuthError, authenticate_user
 
 
 def load_users_from_json(json_path: str) -> List[Dict]:
