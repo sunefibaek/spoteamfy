@@ -6,6 +6,11 @@ on:
       - '[0-9]*'
       - 'feat/**'
       - 'bugfix/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
 
 jobs:
   lint-and-test:
@@ -36,3 +41,26 @@ jobs:
 
       - name: Run pytest
         run: poetry run pytest  --cov=spoteamfy --cov-report=term-missing
+
+  build-mkdocs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Install MkDocs and theme
+        run: poetry add mkdocs mkdocs-material
+
+      - name: Build MkDocs site
+        run: poetry run mkdocs gh-deploy --force
