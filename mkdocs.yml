@@ -1,0 +1,13 @@
+site_name: Spoteamfy
+theme:
+  name: "material"  # Optional: Use the Material theme for better styling
+
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [spoteamfy/src, scripts]  # Path to your Python source code
+
+nav:
+  - Home: index.md
+  - API Reference: reference.md
