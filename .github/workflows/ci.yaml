@@ -6,6 +6,7 @@ on:
       - '[0-9]*'
       - 'feat/**'
       - 'bugfix/**'
+  workflow_dispatch:
 
 permissions:
   contents: write
