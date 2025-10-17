@@ -7,6 +7,7 @@ This script handles both getting initial refresh tokens and refreshing access to
 import json
 import os
 import sys
+from typing import Dict, Optional
 
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
@@ -15,7 +16,9 @@ from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "spoteamfy", "src"))
 
 
-def get_initial_auth_for_user(username, client_id, client_secret, redirect_uri):
+def get_initial_auth_for_user(
+    username: str, client_id: str, client_secret: str, redirect_uri: str
+) -> Optional[Dict]:
     """Get initial authorization for a user using Authorization Code Flow.
 
     This will open a browser and require user interaction.
@@ -95,7 +98,9 @@ def get_initial_auth_for_user(username, client_id, client_secret, redirect_uri):
         return None
 
 
-def refresh_access_token(client_id, client_secret, refresh_token):
+def refresh_access_token(
+    client_id: str, client_secret: str, refresh_token: str
+) -> Optional[Dict]:
     """Refresh an access token using a refresh token.
 
     Args:
@@ -139,7 +144,7 @@ def refresh_access_token(client_id, client_secret, refresh_token):
         return None
 
 
-def test_access_token(access_token):
+def test_access_token(access_token: str) -> bool:
     """Test if an access token works by making a simple API call.
 
     Args:
@@ -161,7 +166,7 @@ def test_access_token(access_token):
         return False
 
 
-def get_client_credentials_token(client_id, client_secret):
+def get_client_credentials_token(client_id: str, client_secret: str) -> Optional[str]:
     """Get an access token using Client Credentials Flow (app-only, no user context).
 
     This is useful for app-only requests but won't work for user-specific data.
@@ -196,7 +201,7 @@ def get_client_credentials_token(client_id, client_secret):
         return None
 
 
-def main():
+def main() -> None:
     """Main function to handle token operations.
 
     Provides an interactive menu for managing Spotify API tokens including

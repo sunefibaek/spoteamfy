@@ -1,7 +1,7 @@
 # src/cli.py
 import json
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import click
 import requests
@@ -100,7 +100,7 @@ def fetch_recently_played(
     Returns:
         A list of track dictionaries with relevant information including
         name, artist, album, popularity, external_urls, preview_url,
-        and played_at timestamp.
+        played_at timestamp, and album_cover_url.
 
     Raises:
         Exception: If the Spotify API request fails or returns invalid data.
@@ -123,6 +123,17 @@ def fetch_recently_played(
             if track_id not in seen_tracks:
                 seen_tracks.add(track_id)
 
+                # Get album cover art (use the medium size if available)
+                album_cover_url = None
+                if track["album"]["images"]:
+                    # Spotify provides images in descending size order
+                    # Try to get a medium-sized image (around 300px)
+                    for image in track["album"]["images"]:
+                        if image["height"] >= 300:
+                            album_cover_url = image["url"]
+                        elif not album_cover_url:  # fallback to any available image
+                            album_cover_url = image["url"]
+
                 track_info = {
                     "name": track["name"],
                     "artist": ", ".join(
@@ -133,6 +144,7 @@ def fetch_recently_played(
                     "external_urls": track["external_urls"]["spotify"],
                     "preview_url": track["preview_url"],
                     "played_at": item["played_at"],  # When it was played
+                    "album_cover_url": album_cover_url,  # Album cover art
                 }
                 tracks.append(track_info)
 
@@ -147,30 +159,163 @@ def fetch_recently_played(
 
 
 def format_tracks_for_teams(username: str, tracks: List[Dict]) -> Dict:
-    """Format track information for Teams webhook.
+    """Format track information as an adaptive card for Teams webhook.
 
     Args:
         username: Spotify username to include in the message.
         tracks: List of track dictionaries to format.
 
     Returns:
-        A Teams message payload dictionary with formatted track information.
-        If no tracks are provided, returns a message indicating no tracks found.
+        A Teams message payload dictionary with an adaptive card containing
+        formatted track information and album cover art from the most recent track.
+        If no tracks are provided, returns a simple message card.
     """
     if not tracks:
-        return {"text": f"No recently played tracks found for {username}"}
+        return {
+            "type": "message",
+            "attachments": [
+                {
+                    "contentType": "application/vnd.microsoft.card.adaptive",
+                    "content": {
+                        "type": "AdaptiveCard",
+                        "version": "1.3",
+                        "body": [
+                            {
+                                "type": "TextBlock",
+                                "text": f"No recently played tracks found for {username}",  # noqa: E501
+                                "weight": "Bolder",
+                                "size": "Medium",
+                                "color": "Attention",
+                            }
+                        ],
+                    },
+                }
+            ],
+        }
 
-    # Create a formatted message for Teams
-    message_text = f"🎵 **Recently Played {len(tracks)} Tracks for {username}** 🎵\n\n"
+    # Get album cover from the most recent track (first in list)
+    most_recent_track = tracks[0]
+    album_cover_url = most_recent_track.get("album_cover_url")
+
+    # Build the adaptive card body
+    card_body = [
+        {
+            "type": "TextBlock",
+            "text": f"Recently Played {len(tracks)} Tracks for {username}",
+            "weight": "Bolder",
+            "size": "Large",
+        }
+    ]
+
+    # Add album cover if available
+    if album_cover_url:
+        card_body.append(
+            {
+                "type": "Image",
+                "url": album_cover_url,
+                "size": "Medium",
+                "horizontalAlignment": "Center",
+                "altText": f"Album cover for {most_recent_track['album']}",
+            }
+        )
+        card_body.append(
+            {
+                "type": "TextBlock",
+                "text": f"Album: {most_recent_track['album']}",
+                "size": "Small",
+                "color": "Accent",
+                "horizontalAlignment": "Center",
+                "spacing": "None",
+            }
+        )
+
+    # Add tracks list
+    tracks_container = {"type": "Container", "items": []}
 
     for i, track in enumerate(tracks, 1):
-        message_text += f"{i}. **{track['name']}** by {track['artist']}\n"
-        message_text += f"   Album: {track['album']}\n"
-        if track["external_urls"]:
-            message_text += f"   [Listen on Spotify]({track['external_urls']})\n"
-        message_text += "\n"
+        track_item = {
+            "type": "ColumnSet",
+            "columns": [
+                {
+                    "type": "Column",
+                    "width": "auto",
+                    "items": [
+                        {
+                            "type": "TextBlock",
+                            "text": f"{i}.",
+                            "weight": "Bolder",
+                            "color": "Accent",
+                        }
+                    ],
+                },
+                {
+                    "type": "Column",
+                    "width": "stretch",
+                    "items": [
+                        {
+                            "type": "TextBlock",
+                            "text": f"**{track['name']}**",
+                            "weight": "Bolder",
+                            "wrap": True,
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": f"by {track['artist']}",
+                            "size": "Small",
+                            "color": "Default",
+                            "spacing": "None",
+                            "wrap": True,
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": f"Album: {track['album']}",
+                            "size": "Small",
+                            "color": "Default",
+                            "spacing": "None",
+                            "wrap": True,
+                        },
+                    ],
+                },
+            ],
+        }
 
-    return {"text": message_text}
+        # Add Spotify link if available
+        if track.get("external_urls"):
+            track_item["selectAction"] = {
+                "type": "Action.OpenUrl",
+                "url": track["external_urls"],
+            }
+
+        tracks_container["items"].append(track_item)
+
+        # Add separator between tracks (except for the last one)
+        if i < len(tracks):
+            tracks_container["items"].append(
+                {
+                    "type": "TextBlock",
+                    "text": "",
+                    "size": "Small",
+                    "spacing": "Small",
+                }
+            )
+
+    card_body.append(tracks_container)
+
+    # Create the complete adaptive card message
+    return {
+        "type": "message",
+        "attachments": [
+            {
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "content": {
+                    "type": "AdaptiveCard",
+                    "version": "1.3",
+                    "body": card_body,
+                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                },
+            }
+        ],
+    }
 
 
 def post_to_teams(webhook_url: str, message: Dict) -> bool:
@@ -214,7 +359,11 @@ def post_to_teams(webhook_url: str, message: Dict) -> bool:
     required=False,
     help="Teams webhook URL for posting track info. Defaults to .env WEBHOOK_URL.",
 )
-def main(num_tracks, users_json, teams_webhook):
+def main(
+    num_tracks: int,
+    users_json: Optional[str],
+    teams_webhook: Optional[str],
+) -> None:
     """CLI entry point for Spotify Teams utility.
 
     Fetches recently played tracks from Spotify for configured users

@@ -97,7 +97,14 @@ def test_fetch_recently_played():
                     "id": "track1",
                     "name": "Test Song 1",
                     "artists": [{"name": "Artist 1"}, {"name": "Artist 2"}],
-                    "album": {"name": "Test Album"},
+                    "album": {
+                        "name": "Test Album",
+                        "images": [
+                            {"height": 640, "url": "https://example.com/large.jpg"},
+                            {"height": 300, "url": "https://example.com/medium.jpg"},
+                            {"height": 64, "url": "https://example.com/small.jpg"},
+                        ],
+                    },
                     "popularity": 85,
                     "external_urls": {"spotify": "https://open.spotify.com/track/123"},
                     "preview_url": "https://preview.url",
@@ -109,7 +116,13 @@ def test_fetch_recently_played():
                     "id": "track2",
                     "name": "Test Song 2",
                     "artists": [{"name": "Artist 3"}],
-                    "album": {"name": "Another Album"},
+                    "album": {
+                        "name": "Another Album",
+                        "images": [
+                            {"height": 640, "url": "https://example.com/large2.jpg"},
+                            {"height": 300, "url": "https://example.com/medium2.jpg"},
+                        ],
+                    },
                     "popularity": 92,
                     "external_urls": {"spotify": "https://open.spotify.com/track/456"},
                     "preview_url": None,
@@ -127,8 +140,12 @@ def test_fetch_recently_played():
     assert tracks[0]["album"] == "Test Album"
     assert tracks[0]["popularity"] == 85
     assert tracks[0]["played_at"] == "2023-01-01T12:00:00Z"
+    assert tracks[0]["album_cover_url"] == "https://example.com/medium.jpg"  # New field
     assert tracks[1]["name"] == "Test Song 2"
     assert tracks[1]["artist"] == "Artist 3"
+    assert (
+        tracks[1]["album_cover_url"] == "https://example.com/medium2.jpg"
+    )  # New field
 
     # Verify spotipy method was called with correct parameters
     mock_client.current_user_recently_played.assert_called_once_with(limit=2)
@@ -154,7 +171,12 @@ def test_fetch_recently_played_removes_duplicates():
                     "id": "track1",
                     "name": "Test Song",
                     "artists": [{"name": "Artist 1"}],
-                    "album": {"name": "Test Album"},
+                    "album": {
+                        "name": "Test Album",
+                        "images": [
+                            {"height": 300, "url": "https://example.com/medium.jpg"}
+                        ],
+                    },
                     "popularity": 85,
                     "external_urls": {"spotify": "https://open.spotify.com/track/123"},
                     "preview_url": None,
@@ -166,7 +188,12 @@ def test_fetch_recently_played_removes_duplicates():
                     "id": "track1",  # Same track ID - should be filtered out
                     "name": "Test Song",
                     "artists": [{"name": "Artist 1"}],
-                    "album": {"name": "Test Album"},
+                    "album": {
+                        "name": "Test Album",
+                        "images": [
+                            {"height": 300, "url": "https://example.com/medium.jpg"}
+                        ],
+                    },
                     "popularity": 85,
                     "external_urls": {"spotify": "https://open.spotify.com/track/123"},
                     "preview_url": None,
@@ -178,7 +205,12 @@ def test_fetch_recently_played_removes_duplicates():
                     "id": "track2",
                     "name": "Different Song",
                     "artists": [{"name": "Artist 2"}],
-                    "album": {"name": "Different Album"},
+                    "album": {
+                        "name": "Different Album",
+                        "images": [
+                            {"height": 300, "url": "https://example.com/different.jpg"}
+                        ],
+                    },
                     "popularity": 75,
                     "external_urls": {"spotify": "https://open.spotify.com/track/456"},
                     "preview_url": None,
@@ -197,30 +229,59 @@ def test_fetch_recently_played_removes_duplicates():
 
 
 def test_format_tracks_for_teams():
-    """Test formatting tracks for Teams webhook."""
+    """Test formatting tracks for Teams webhook as adaptive card."""
     tracks = [
         {
             "name": "Test Song",
             "artist": "Test Artist",
             "album": "Test Album",
             "external_urls": "https://open.spotify.com/track/123",
+            "album_cover_url": "https://example.com/cover.jpg",
         }
     ]
 
     message = format_tracks_for_teams("testuser", tracks)
 
-    assert "testuser" in message["text"]
-    assert "Test Song" in message["text"]
-    assert "Test Artist" in message["text"]
-    assert "Test Album" in message["text"]
-    assert "https://open.spotify.com/track/123" in message["text"]
+    # Check that it's an adaptive card format
+    assert message["type"] == "message"
+    assert "attachments" in message
+    assert len(message["attachments"]) == 1
+
+    attachment = message["attachments"][0]
+    assert attachment["contentType"] == "application/vnd.microsoft.card.adaptive"
+
+    card_content = attachment["content"]
+    assert card_content["type"] == "AdaptiveCard"
+    assert card_content["version"] == "1.3"
+
+    # Convert the card body to a string to check for content
+    card_body_str = str(card_content["body"])
+    assert "testuser" in card_body_str
+    assert "Test Song" in card_body_str
+    assert "Test Artist" in card_body_str
+    assert "Test Album" in card_body_str
 
 
 def test_format_tracks_for_teams_no_tracks():
-    """Test formatting when no tracks are found."""
+    """Test formatting when no tracks are found returns adaptive card."""
     message = format_tracks_for_teams("testuser", [])
 
-    assert message["text"] == "No recently played tracks found for testuser"
+    # Check that it's an adaptive card format
+    assert message["type"] == "message"
+    assert "attachments" in message
+    assert len(message["attachments"]) == 1
+
+    attachment = message["attachments"][0]
+    assert attachment["contentType"] == "application/vnd.microsoft.card.adaptive"
+
+    card_content = attachment["content"]
+    assert card_content["type"] == "AdaptiveCard"
+
+    # Check the no tracks message
+    body = card_content["body"]
+    assert len(body) == 1
+    assert body[0]["type"] == "TextBlock"
+    assert "No recently played tracks found for testuser" in body[0]["text"]
 
 
 @patch("spoteamfy.src.cli.requests.post")
