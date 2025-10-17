@@ -35,3 +35,6 @@ config/users.json
 
 # Exclude plan folder
 .plan/
+
+# mkdocs site (will be build during deploy)
+site

@@ -12,17 +12,21 @@ from .spotify_auth import SpotifyAuthError, authenticate_user
 
 
 def load_users_from_json(json_path: str) -> List[Dict]:
-    """
-    Loads user credentials from a JSON file.
+    """Load user credentials from a JSON file.
+
+    Each user must have: username, client_id, client_secret,
+    redirect_uri, refresh_token.
 
     Args:
-        json_path (str): Path to the JSON file containing user credentials.
+        json_path: Path to the JSON file containing user credentials.
 
     Returns:
-        List[Dict]: List of user credential dictionaries.
+        A list of dictionaries containing user credential information.
 
     Raises:
-        ValueError: If any user entry is missing required keys.
+        ValueError: If a user entry is missing required keys.
+        FileNotFoundError: If the JSON file cannot be found.
+        json.JSONDecodeError: If the JSON file is malformed.
     """
     with open(json_path, "r") as f:
         users = json.load(f)
@@ -40,16 +44,15 @@ def load_users_from_json(json_path: str) -> List[Dict]:
 
 
 def get_users_json_path(cli_path: str = None) -> str:
-    """
-    Determines the path to the users.json file.
+    """Determine the path to the users.json file.
 
     Priority: CLI argument > .env USERS_JSON_PATH > default ./config/users.json
 
     Args:
-        cli_path (str, optional): Path provided via CLI argument. Defaults to None.
+        cli_path: Optional path provided via CLI argument.
 
     Returns:
-        str: Path to the users.json file.
+        The resolved path to the users.json file.
     """
     load_dotenv()
     if cli_path:
@@ -61,20 +64,18 @@ def get_users_json_path(cli_path: str = None) -> str:
 
 
 def get_webhook_url(cli_webhook: str = None) -> str:
-    """
-    Determines the webhook URL to use.
+    """Determine the webhook URL to use.
 
     Priority: CLI argument > .env WEBHOOK_URL > raise error
 
     Args:
-        cli_webhook (str, optional): Webhook URL provided via CLI argument.
-        Defaults to None.
+        cli_webhook: Optional webhook URL provided via CLI argument.
 
     Returns:
-        str: Webhook URL.
+        The resolved webhook URL.
 
     Raises:
-        ValueError: If no webhook URL is provided.
+        ValueError: If no webhook URL is provided via CLI or environment variable.
     """
     load_dotenv()
     if cli_webhook:
@@ -90,23 +91,24 @@ def get_webhook_url(cli_webhook: str = None) -> str:
 def fetch_recently_played(
     spotify_client: spotipy.Spotify, num_tracks: int = 5
 ) -> List[Dict]:
-    """
-    Fetches recently played tracks for a user using spotipy.
+    """Fetch recently played tracks for a user using spotipy.
 
     Args:
-        spotify_client (spotipy.Spotify): Authenticated spotipy client.
-        num_tracks (int, optional): Number of tracks to fetch (max 50). Defaults to 5.
+        spotify_client: Authenticated spotipy client.
+        num_tracks: Number of tracks to fetch (max 50). Defaults to 5.
 
     Returns:
-        List[Dict]: List of track dictionaries with relevant information.
+        A list of track dictionaries with relevant information including
+        name, artist, album, popularity, external_urls, preview_url,
+        and played_at timestamp.
 
     Raises:
-        Exception: If fetching recently played tracks fails.
+        Exception: If the Spotify API request fails or returns invalid data.
     """
     try:
         # Use spotipy's current_user_recently_played method
         results = spotify_client.current_user_recently_played(
-            limit=min(num_tracks, 20)  # Spotify API limit is 50
+            limit=min(num_tracks, 50)  # Spotify API limit is 50
         )
 
         tracks = []
@@ -131,11 +133,6 @@ def fetch_recently_played(
                     "external_urls": track["external_urls"]["spotify"],
                     "preview_url": track["preview_url"],
                     "played_at": item["played_at"],  # When it was played
-                    "album_cover_url": (
-                        track["album"]["images"][0]["url"]
-                        if track["album"].get("images")
-                        else None
-                    ),
                 }
                 tracks.append(track_info)
 
@@ -149,87 +146,42 @@ def fetch_recently_played(
         raise Exception(f"Failed to fetch recently played tracks: {e}")
 
 
-def format_adaptive_card_for_teams(username: str, tracks: List[Dict]) -> Dict:
-    """
-    Formats track information as an Adaptive Card for Teams,
-    including album cover art of the most recent track.
+def format_tracks_for_teams(username: str, tracks: List[Dict]) -> Dict:
+    """Format track information for Teams webhook.
 
     Args:
-        username (str): Spotify username.
-        tracks (List[Dict]): List of track dictionaries.
+        username: Spotify username to include in the message.
+        tracks: List of track dictionaries to format.
 
     Returns:
-        Dict: Adaptive Card payload for Teams webhook.
+        A Teams message payload dictionary with formatted track information.
+        If no tracks are provided, returns a message indicating no tracks found.
     """
-    card_body = []
-    if tracks and tracks[0].get("album_cover_url"):
-        card_body.append(
-            {
-                "type": "Image",
-                "url": tracks[0]["album_cover_url"],
-                "size": "Medium",
-                "style": "Default",
-            }
-        )
-    card_body.append(
-        {
-            "type": "TextBlock",
-            "text": f"🎵 Recently Played Tracks for {username} 🎵",
-            "weight": "Bolder",
-            "size": "Medium",
-        }
-    )
     if not tracks:
-        card_body.append(
-            {
-                "type": "TextBlock",
-                "text": f"No recently played tracks found for {username}",
-                "wrap": True,
-            }
-        )
-    else:
-        for i, track in enumerate(tracks, 1):
-            text = (
-                f"{i}. **{track['name']}** by {track['artist']}  #"
-                f"\nAlbum: {track['album']}"
-            )
-            card_body.append({"type": "TextBlock", "text": text, "wrap": True})
-            if track.get("external_urls"):
-                card_body.append(
-                    {
-                        "type": "TextBlock",
-                        "text": f"[Listen on Spotify]({track['external_urls']})",
-                        "wrap": True,
-                        "spacing": "None",
-                    }
-                )
-    card_payload = {
-        "type": "message",
-        "attachments": [
-            {
-                "contentType": "application/vnd.microsoft.card.adaptive",
-                "content": {
-                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-                    "type": "AdaptiveCard",
-                    "version": "1.4",
-                    "body": card_body,
-                },
-            }
-        ],
-    }
-    return card_payload
+        return {"text": f"No recently played tracks found for {username}"}
+
+    # Create a formatted message for Teams
+    message_text = f"🎵 **Recently Played {len(tracks)} Tracks for {username}** 🎵\n\n"
+
+    for i, track in enumerate(tracks, 1):
+        message_text += f"{i}. **{track['name']}** by {track['artist']}\n"
+        message_text += f"   Album: {track['album']}\n"
+        if track["external_urls"]:
+            message_text += f"   [Listen on Spotify]({track['external_urls']})\n"
+        message_text += "\n"
+
+    return {"text": message_text}
 
 
 def post_to_teams(webhook_url: str, message: Dict) -> bool:
-    """
-    Posts a message to Microsoft Teams using a webhook.
+    """Post message to Microsoft Teams using webhook.
 
     Args:
-        webhook_url (str): Teams webhook URL.
-        message (Dict): Message payload dictionary.
+        webhook_url: Teams webhook URL to post to.
+        message: Message payload dictionary to send.
 
     Returns:
-        bool: True if successful, False otherwise.
+        True if the message was posted successfully, False otherwise.
     """
     try:
         response = requests.post(
@@ -262,20 +214,16 @@ def post_to_teams(webhook_url: str, message: Dict) -> bool:
     required=False,
     help="Teams webhook URL for posting track info. Defaults to .env WEBHOOK_URL.",
 )
-@click.option(
-    "--username",
-    required=False,
-    help="Only process the user with this username from the users JSON file.",
-)
-def main(num_tracks, users_json, teams_webhook, username):
-    """
-    CLI entry point for Spotify Teams utility.
+def main(num_tracks, users_json, teams_webhook):
+    """CLI entry point for Spotify Teams utility.
+
+    Fetches recently played tracks from Spotify for configured users
+    and posts formatted messages to Microsoft Teams via webhook.
 
     Args:
-        num_tracks (int): Number of recently played tracks to fetch per user.
-        users_json (str): Path to JSON file with user credentials.
-        teams_webhook (str): Teams webhook URL for posting track info.
-        username (str): Only process the user with this username.
+        num_tracks: Number of recently played tracks to fetch per user.
+        users_json: Path to JSON file containing user credentials.
+        teams_webhook: Teams webhook URL for posting messages.
     """
     users_json_path = get_users_json_path(users_json)
 
@@ -297,49 +245,38 @@ def main(num_tracks, users_json, teams_webhook, username):
         click.echo(f"Error loading users: {e}", err=True)
         return
 
-    # Filter users by username if specified
-    if username:
-        filtered_users = [u for u in users if u.get("username") == username]
-        if not filtered_users:
-            click.echo(f"No user found with username '{username}'.", err=True)
-            return
-        users = filtered_users
-        click.echo(f"Processing only user: {username}")
-
     successful_posts = 0
     failed_posts = 0
 
     for user in users:
-        username_val = user.get("username", "<unknown>")
-        click.echo(f"\nProcessing user: {username_val}")
+        username = user.get("username", "<unknown>")
+        click.echo(f"\nProcessing user: {username}")
 
         try:
             # Authenticate user using spotipy
             spotify_client = authenticate_user(user)
-            click.echo(f"✓ Authentication successful for {username_val}")
+            click.echo(f"✓ Authentication successful for {username}")
 
             # Fetch recently played tracks
             tracks = fetch_recently_played(spotify_client, num_tracks)
-            click.echo(
-                f"✓ Fetched {len(tracks)} recently played tracks for {username_val}"
-            )
+            click.echo(f"✓ Fetched {len(tracks)} recently played tracks for {username}")
 
-            # Format Adaptive Card message for Teams
-            message = format_adaptive_card_for_teams(username_val, tracks)
+            # Format message for Teams
+            message = format_tracks_for_teams(username, tracks)
 
             # Post to Teams
             if post_to_teams(webhook_url, message):
-                click.echo(f"✓ Posted tracks for {username_val} to Teams")
+                click.echo(f"✓ Posted tracks for {username} to Teams")
                 successful_posts += 1
             else:
-                click.echo(f"✗ Failed to post tracks for {username_val} to Teams")
+                click.echo(f"✗ Failed to post tracks for {username} to Teams")
                 failed_posts += 1
 
         except SpotifyAuthError as e:
-            click.echo(f"✗ Authentication failed for {username_val}: {e}", err=True)
+            click.echo(f"✗ Authentication failed for {username}: {e}", err=True)
             failed_posts += 1
         except Exception as e:
-            click.echo(f"✗ Error processing {username_val}: {e}", err=True)
+            click.echo(f"✗ Error processing {username}: {e}", err=True)
             failed_posts += 1
 
     # Summary

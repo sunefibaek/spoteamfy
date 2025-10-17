@@ -1,0 +1,16 @@
+[
+  {
+    "username": "user1",
+    "client_id": "SPOTIFY_CLIENT_ID_1",
+    "client_secret": "SPOTIFY_CLIENT_SECRET_1",
+    "redirect_uri": "SPOTIFY_REDIRECT_URI_1",
+    "refresh_token": "SPOTIFY_REFRESH_TOKEN_1"
+  },
+  {
+    "username": "user2",
+    "client_id": "SPOTIFY_CLIENT_ID_2",
+    "client_secret": "SPOTIFY_CLIENT_SECRET_2",
+    "redirect_uri": "SPOTIFY_REDIRECT_URI_2",
+    "refresh_token": "SPOTIFY_REFRESH_TOKEN_2"
+  }
+]

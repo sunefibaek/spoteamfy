@@ -11,20 +11,19 @@ class SpotifyAuthError(Exception):
 
 
 def authenticate_user(user_credentials: Dict[str, Any]) -> spotipy.Spotify:
-    """
-    Authenticate a Spotify user using Spotipy and return a Spotipy client instance.
+    """Authenticate a Spotify user using Spotipy and return a Spotipy client instance.
 
     Args:
-        user_credentials (Dict[str, Any]): Dictionary containing user credentials.
-            Must include 'client_id', 'client_secret', 'redirect_uri',
-            and 'refresh_token'.
+        user_credentials: Dictionary containing user authentication credentials.
+            Must include 'client_id', 'client_secret', 'redirect_uri', and
+            'refresh_token' keys.
 
     Returns:
-        spotipy.Spotify: Authenticated Spotipy client instance.
+        An authenticated spotipy.Spotify client instance.
 
     Raises:
-        SpotifyAuthError: If authentication fails due to missing credentials,
-            invalid refresh token, or any other error during the authentication process.
+        SpotifyAuthError: If authentication fails due to invalid credentials,
+            missing required fields, or API errors.
     """
     try:
         # Updated scope to include user-top-read for getting top tracks
