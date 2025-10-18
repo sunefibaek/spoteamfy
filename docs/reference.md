@@ -7,4 +7,8 @@
 ::: spotify_auth
 
 ## Utility scripts
-::: get_access_token.get_initial_auth_for_user
+### Get access token
+::: get_access_token
+
+### Auth validator
+::: auth_validator

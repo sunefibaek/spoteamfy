@@ -7,6 +7,7 @@ This script handles both getting initial refresh tokens and refreshing access to
 import json
 import os
 import sys
+from typing import Dict, Optional
 
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
@@ -15,10 +16,22 @@ from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "spoteamfy", "src"))
 
 
-def get_initial_auth_for_user(username, client_id, client_secret, redirect_uri):
-    """
-    Get initial authorization for a user using Authorization Code Flow.
+def get_initial_auth_for_user(
+    username: str, client_id: str, client_secret: str, redirect_uri: str
+) -> Optional[Dict]:
+    """Get initial authorization for a user using Authorization Code Flow.
+
     This will open a browser and require user interaction.
+
+    Args:
+        username: The username for display purposes.
+        client_id: Spotify app client ID.
+        client_secret: Spotify app client secret.
+        redirect_uri: Redirect URI configured in Spotify app.
+
+    Returns:
+        Token info dictionary containing access_token, refresh_token, expires_at,
+        and scope if successful, None otherwise.
     """
     # Updated scope to include all required permissions
     scope = """
@@ -85,9 +98,18 @@ def get_initial_auth_for_user(username, client_id, client_secret, redirect_uri):
         return None
 
 
-def refresh_access_token(client_id, client_secret, refresh_token):
-    """
-    Refresh an access token using a refresh token.
+def refresh_access_token(
+    client_id: str, client_secret: str, refresh_token: str
+) -> Optional[Dict]:
+    """Refresh an access token using a refresh token.
+
+    Args:
+        client_id: Spotify app client ID.
+        client_secret: Spotify app client secret.
+        refresh_token: Valid refresh token to use for getting new access token.
+
+    Returns:
+        Refreshed token info dictionary if successful, None otherwise.
     """
     sp_oauth = SpotifyOAuth(
         client_id=client_id,
@@ -122,9 +144,14 @@ def refresh_access_token(client_id, client_secret, refresh_token):
         return None
 
 
-def test_access_token(access_token):
-    """
-    Test if an access token works by making a simple API call.
+def test_access_token(access_token: str) -> bool:
+    """Test if an access token works by making a simple API call.
+
+    Args:
+        access_token: Access token to test.
+
+    Returns:
+        True if the token is valid and works, False otherwise.
     """
     try:
         sp = spotipy.Spotify(auth=access_token)
@@ -139,10 +166,17 @@ def test_access_token(access_token):
         return False
 
 
-def get_client_credentials_token(client_id, client_secret):
-    """
-    Get an access token using Client Credentials Flow (app-only, no user context).
+def get_client_credentials_token(client_id: str, client_secret: str) -> Optional[str]:
+    """Get an access token using Client Credentials Flow (app-only, no user context).
+
     This is useful for app-only requests but won't work for user-specific data.
+
+    Args:
+        client_id: Spotify app client ID.
+        client_secret: Spotify app client secret.
+
+    Returns:
+        Access token string if successful, None otherwise.
     """
     try:
         client_credentials_manager = SpotifyClientCredentials(
@@ -167,8 +201,13 @@ def get_client_credentials_token(client_id, client_secret):
         return None
 
 
-def main():
-    """Main function to handle token operations."""
+def main() -> None:
+    """Main function to handle token operations.
+
+    Provides an interactive menu for managing Spotify API tokens including
+    getting initial authorization, refreshing tokens, testing tokens, and
+    obtaining client credentials tokens.
+    """
 
     # Load users.json
     config_path = os.path.join(os.path.dirname(__file__), "..", "config", "users.json")

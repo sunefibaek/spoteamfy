@@ -15,8 +15,15 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "..", "spoteamfy", "src"
 from spotify_auth import SpotifyAuthError, authenticate_user  # noqa: E402
 
 
-def validate_user_auth(username):
-    """Validate authentication for a specific user and fetch their profile info."""
+def validate_user_auth(username: str) -> bool:
+    """Validate authentication for a specific user and fetch their profile info.
+
+    Args:
+        username: The username to validate authentication for.
+
+    Returns:
+        True if authentication is successful, False otherwise.
+    """
 
     # Load users.json
     script_dir = Path(__file__).resolve().parent.parent

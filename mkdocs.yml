@@ -1,13 +1,19 @@
 site_name: Spoteamfy
 theme:
   name: "material"  # Optional: Use the Material theme for better styling
+  features:
+    - navigation.tabs
+    - search.suggest
+    - search.highlight
 
 plugins:
   - mkdocstrings:
       handlers:
         python:
           paths: [spoteamfy/src, scripts]  # Path to your Python source code
+  - search
 
 nav:
   - Home: index.md
+  - CLI: cli.md
   - API Reference: reference.md
