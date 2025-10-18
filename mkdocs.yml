@@ -3,8 +3,6 @@ theme:
   name: "material"  # Optional: Use the Material theme for better styling
   features:
     - navigation.tabs
-    - navigation.sections
-    - toc.integrate
     - search.suggest
     - search.highlight
 
